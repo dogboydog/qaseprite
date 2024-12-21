@@ -10,6 +10,8 @@ on:
 
 jobs:
   ubuntu:
+    # TODO remove, for testing other jobs only
+    if: false 
     name: Ubuntu ${{ matrix.ubuntu_version }} (Qt ${{ matrix.qt_version }})
     runs-on: ubuntu-${{ matrix.ubuntu_version }}
 
@@ -54,4 +56,68 @@ jobs:
           -DUSE_SHARED_FREETYPE=on \
           -DUSE_SHARED_HARFBUZZ=on
         cmake --build build --config Release
+        sudo cmake --install build --config Release
+
+  windows:
+    name: Windows (${{ matrix.arch }}-bit, Qt ${{ matrix.qt_version_major }})
+    runs-on: windows-latest
+ 
+
+    strategy:
+      matrix:
+        include:
+        - qt_version: 5.15.2
+          qt_version_major: 5
+          qt_arch: win32_mingw81
+          qt_modules: ""
+          arch: 32
+          openssl_arch: x86
+          mingw_component: tools_mingw
+          mingw_variant: qt.tools.win32_mingw810
+          mingw_dir: mingw810_32
+        - qt_version: 6.8.1
+          qt_version_major: 6
+          qt_arch: win64_mingw
+          qt_modules: "qtimageformats"
+          arch: 64
+          openssl_arch: x64
+          mingw_component: tools_mingw1310
+          mingw_variant: qt.tools.win64_mingw1310
+          mingw_dir: mingw1310_64
+
+    env:
+      TILED_VERSION: ${{ needs.version.outputs.version }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: ${{ matrix.qt_version }}
+        arch: ${{ matrix.qt_arch }}
+        modules: ${{ matrix.qt_modules }}
+        tools: "${{ matrix.mingw_component }},${{ matrix.mingw_variant }}"
+        aqtversion: '==3.1.19'
+        setup-python: false
+        cache: true
+
+    - name: Temp test 
+      run: |
+        command -v gcc 
+        command -v g++ 
+
+#      -DCMAKE_CXX_COMPILER="C:/MinGW-w64/mingw64/bin/g++.exe" -DCMAKE_C_COMPILER="C:/MinGW-w64/mingw64/bin/gcc.exe"
+
+    - name: Build
+      run: |
+        cmake -DCMAKE_CXX_COMPILER="$(command -v g++)" -DCMAKE_C_COMPILER="$(command -v gcc)" -DCMAKE_MAKE_PROGRAM=mingw32-make -B build -DCMAKE_BUILD_TYPE=Release 
+        cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc  --build build --config Release
         sudo cmake --install build --config Release
