@@ -120,9 +120,9 @@ jobs:
           mingw_dir: mingw1310_64
           arch: 64
 
-    defaults:
-      run:
-        shell: bash
+    # defaults:
+    #   run:
+    #     shell: bash
 
     steps:
     - name: Checkout repository
